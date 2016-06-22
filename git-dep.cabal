@@ -19,9 +19,10 @@ cabal-version:       >=1.10
 
 
 executable git-dep
-  default-language:    Haskell2010
-  main-is:             Main.hs
-  hs-source-dirs:      src
+  default-language: Haskell2010
+  main-is:          Main.hs
+  hs-source-dirs:   src
+  ghc-options:      -Wall -fwarn-tabs
   
   -- Modules included in this executable, other than Main.
   -- other-modules:       
