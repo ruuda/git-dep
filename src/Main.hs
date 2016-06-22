@@ -8,6 +8,8 @@ module Main where
 
 import System.Environment (getArgs)
 
+import Command (add, graph, rebase, remove, status)
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -24,21 +26,6 @@ handleCommand "graph"  = graph
 handleCommand "--help" = const help
 handleCommand "-h"     = const printUsage
 handleCommand cmd      = const (printUnknownCommand cmd)
-
-add :: [String] -> IO ()
-add args = undefined
-
-remove :: [String] -> IO ()
-remove args = undefined
-
-rebase :: [String] -> IO ()
-rebase args = undefined
-
-status :: [String] -> IO ()
-status args = undefined
-
-graph :: [String] -> IO ()
-graph args = undefined
 
 help :: IO ()
 help = undefined
