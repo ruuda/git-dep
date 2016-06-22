@@ -1,0 +1,29 @@
+name:                git-dep
+version:             0.0.0
+category:            Development
+synopsis:            A tool to manage dependent branches
+description:         Git-dep can keep track of where branches branched off, and
+                     rebase correctly when the branch points have been rebased.
+
+copyright:           Copyright 2016 Ruud van Asseldonk
+license:             GPL-3
+license-file:        license
+
+author:              Ruud van Asseldonk
+maintainer:          dev@veniogames.com
+homepage:            https://github.com/ruuda/git-dep
+
+build-type:          Simple
+extra-source-files:  readme.md
+cabal-version:       >=1.10
+
+
+executable git-dep
+  default-language:    Haskell2010
+  main-is:             Main.hs
+  hs-source-dirs:      src
+  
+  -- Modules included in this executable, other than Main.
+  -- other-modules:       
+  
+  build-depends:       base >=4.9 && <4.10
