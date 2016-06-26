@@ -6,7 +6,9 @@
 
 module Command (add, graph, rebase, remove, status) where
 
-import RepositoryUtils
+import Control.Monad (forM_)
+
+import RepositoryUtils (listBranches, liftIO, runGit)
 
 add :: [String] -> IO ()
 add _args = undefined
@@ -18,7 +20,10 @@ rebase :: [String] -> IO ()
 rebase _args = undefined
 
 status :: [String] -> IO ()
-status _args = undefined
+status _args = runGit $ do
+  branches <- listBranches
+  liftIO $ putStrLn "branches: "
+  liftIO $ forM_ branches putStrLn
 
 graph :: [String] -> IO ()
 graph _args = undefined
