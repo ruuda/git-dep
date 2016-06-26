@@ -11,6 +11,7 @@ module GitPlumbing
   GitOperation,
   liftIO,
   runGitCommand,
+  tryGitCommand,
   runGit
 )
 where
@@ -25,6 +26,7 @@ import System.Process
 -- different IO operation.
 data GitOperationFree a
   = RunGitCommand [String] (String -> a)
+  | TryGitCommand [String] (Maybe String -> a)
   | LiftIO (IO ()) (() -> a) -- TODO: Can I make it generic without resorting to GADTs?
   deriving (Functor)
 
@@ -34,9 +36,15 @@ type GitOperation = Free GitOperationFree
 -- thought of as directly performing their operation, but in fact all they do is
 -- build up a sequence of commands that is later interpreted by runGit.
 
--- Calls Git with the given arguments and returns its output.
+-- Calls Git with the given arguments and returns its output. Aborts when Git
+-- fails with a nonzero exit code, and prints Git's stderr to stderr.
 runGitCommand :: [String] -> GitOperation String
 runGitCommand args = liftF $ RunGitCommand args id
+
+-- Calls Git with the given arguments and returns its output if the exit code
+-- was 0. Returns nothing if the exit code was nonzero.
+tryGitCommand :: [String] -> GitOperation (Maybe String)
+tryGitCommand args = liftF $ TryGitCommand args id
 
 -- Allows mixing IO operations with Git operations.
 liftIO :: IO () -> GitOperation ()
@@ -50,19 +58,24 @@ runGit :: GitOperation a -> IO a
 runGit op = case op of
   (Pure a)                      -> return a
   (Free (LiftIO action h))      -> action >>= runGit . h
-  (Free (RunGitCommand args h)) -> callGit args >>= handleResult
-    where handleResult (Just output) = return output >>= runGit . h
-          handleResult Nothing       = undefined -- TODO: Use System.Exit here.
+  (Free (TryGitCommand args h)) -> callGit args >>= runGit . h . dropError
+  (Free (RunGitCommand args h)) -> callGit args >>= abortOnError >>= runGit . h
 
-callGit :: [String] -> IO (Maybe String)
+dropError :: Either a b -> Maybe b
+dropError (Right b) = Just b
+dropError (Left _)  = Nothing
+
+abortOnError :: Either (ExitCode, String) String -> IO String
+abortOnError (Right body)              = return body
+abortOnError (Left (exitCode, errors)) = do
+  hPutStr stderr errors
+  exitWith exitCode
+
+-- Invokes Git with the given arguments. Returns its output on success, or the
+-- exit code and stderr on error.
+callGit :: [String] -> IO (Either (ExitCode, String) String)
 callGit args = do
   (exitCode, output, errors) <- readProcessWithExitCode "git" args ""
   if exitCode == ExitSuccess
-    then return (Just output)
-    else failWith errors
-
-failWith :: String -> IO (Maybe String)
-failWith message = do
-  hPutStr stderr message
-  return Nothing
-  -- TODO: Probably keep the exit code, and re-use it later.
+    then return $ Right output
+    else return $ Left (exitCode, errors)
