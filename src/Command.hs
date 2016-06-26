@@ -8,7 +8,7 @@ module Command (add, graph, rebase, remove, status) where
 
 import Control.Monad (forM_)
 
-import Git (listBranches)
+import Git (getDependencies, listBranches)
 import GitPlumbing (liftIO, runGit)
 
 add :: [String] -> IO ()
@@ -25,6 +25,11 @@ status _args = runGit $ do
   branches <- listBranches
   liftIO $ putStrLn "branches: "
   liftIO $ forM_ branches (putStrLn . show)
+  liftIO $ putStrLn "deps: "
+  forM_ branches $ \ branch -> do
+    deps <- getDependencies branch
+    forM_ deps $ \ dep -> do
+      liftIO $ putStrLn $ (show branch) ++ " -> " ++ (show dep)
 
 graph :: [String] -> IO ()
 graph _args = undefined

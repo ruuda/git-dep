@@ -4,12 +4,12 @@
 -- it under the terms of the GNU General Public License version 3. See
 -- the licence file in the root of the repository.
 
-module Git (listBranches) where
+module Git (getDependencies, listBranches) where
 
 import Data.List (stripPrefix)
 import Data.Maybe (fromJust)
 
-import GitPlumbing (GitOperation, runGitCommand)
+import GitPlumbing (GitOperation, runGitCommand, tryGitCommand)
 
 -- Some newtypes to make working with Git more type safe.
 
@@ -30,3 +30,13 @@ listBranches = do
   branches <- runGitCommand ["for-each-ref", "--format=%(refname)", "refs/heads"]
   return $ fmap parseBranch $ lines branches
     where parseBranch = Branch . fromJust . stripPrefix "refs/heads/"
+
+getDependencies :: Branch -> GitOperation [Branch]
+getDependencies branch = do
+  deps <- tryGitCommand ["config", "--get", "branch." ++ (show branch) ++ ".deps"]
+  -- The "deps" config value contains a space-separated list of branch names. It
+  -- can happen that the "deps" key does not exist at all. In that case, return
+  -- the empty list.
+  case deps of
+    Just depsList -> return $ fmap Branch $ words depsList
+    Nothing       -> return []
