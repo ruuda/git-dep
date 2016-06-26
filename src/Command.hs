@@ -10,6 +10,7 @@ import Control.Monad (forM_)
 
 import Git (getDependencies, listBranches)
 import GitPlumbing (liftIO, runGit)
+import Graph (Graph)
 
 add :: [String] -> IO ()
 add _args = undefined
