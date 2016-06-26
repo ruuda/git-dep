@@ -24,7 +24,7 @@ status :: [String] -> IO ()
 status _args = runGit $ do
   branches <- listBranches
   liftIO $ putStrLn "branches: "
-  liftIO $ forM_ branches putStrLn
+  liftIO $ forM_ branches (putStrLn . show)
 
 graph :: [String] -> IO ()
 graph _args = undefined
