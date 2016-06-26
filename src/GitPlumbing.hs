@@ -6,25 +6,25 @@
 
 {-# LANGUAGE DeriveFunctor #-}
 
-module RepositoryUtils
+module GitPlumbing
 (
   GitOperation,
-  getConfig,
-  setConfig,
-  listBranches,
   liftIO,
+  runGitCommand,
   runGit
 )
 where
 
 import Control.Monad.Free
+import System.Exit
+import System.IO
+import System.Process
 
 -- Define a data type for the free monad. These represent the "low level" Git
--- commands that can be invoked.
+-- commands that can be invoked. There are just two of these: call git, or do a
+-- different IO operation.
 data GitOperationFree a
-  = GetConfig String (String -> a)
-  | SetConfig String String a
-  | ListBranches ([String] -> a)
+  = RunGitCommand [String] (String -> a)
   | LiftIO (IO ()) (() -> a) -- TODO: Can I make it generic without resorting to GADTs?
   deriving (Functor)
 
@@ -34,14 +34,9 @@ type GitOperation = Free GitOperationFree
 -- thought of as directly performing their operation, but in fact all they do is
 -- build up a sequence of commands that is later interpreted by runGit.
 
-getConfig :: String -> GitOperation String
-getConfig key = liftF $ GetConfig key id
-
-setConfig :: String -> String -> GitOperation ()
-setConfig key value = liftF $ SetConfig key value ()
-
-listBranches :: GitOperation [String]
-listBranches = liftF $ ListBranches id
+-- Calls Git with the given arguments and returns its output.
+runGitCommand :: [String] -> GitOperation String
+runGitCommand args = liftF $ RunGitCommand args id
 
 -- Allows mixing IO operations with Git operations.
 liftIO :: IO () -> GitOperation ()
@@ -51,21 +46,23 @@ liftIO action = liftF $ LiftIO action id
 -- accepts a command and invokes Git. It also takes care of error handling: if a
 -- command fails, its output will be redirected to stderr, and subsequent
 -- commands will not be executed.
-
 runGit :: GitOperation a -> IO a
+runGit op = case op of
+  (Pure a)                      -> return a
+  (Free (LiftIO action h))      -> action >>= runGit . h
+  (Free (RunGitCommand args h)) -> callGit args >>= handleResult
+    where handleResult (Just output) = return output >>= runGit . h
+          handleResult Nothing       = undefined -- TODO: Use System.Exit here.
 
-runGit (Pure a) = return a
+callGit :: [String] -> IO (Maybe String)
+callGit args = do
+  (exitCode, output, errors) <- readProcessWithExitCode "git" args ""
+  if exitCode == ExitSuccess
+    then return (Just output)
+    else failWith errors
 
-runGit (Free (GetConfig key h)) = do
-  putStrLn $ "not implemented: get config " ++ key
-  return "null" >>= runGit . h
-
-runGit (Free (SetConfig key value a)) = do
-  putStrLn $ "not implemented: set config " ++ key ++ " = " ++ value
-  return a >>= runGit
-
-runGit (Free (ListBranches h)) = do
-  putStrLn "not implemented: list branches"
-  return [] >>= runGit . h
-
-runGit (Free (LiftIO action h)) = action >>= runGit . h
+failWith :: String -> IO (Maybe String)
+failWith message = do
+  hPutStr stderr message
+  return Nothing
+  -- TODO: Probably keep the exit code, and re-use it later.

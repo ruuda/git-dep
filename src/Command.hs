@@ -8,7 +8,8 @@ module Command (add, graph, rebase, remove, status) where
 
 import Control.Monad (forM_)
 
-import RepositoryUtils (listBranches, liftIO, runGit)
+import Git (listBranches)
+import GitPlumbing (liftIO, runGit)
 
 add :: [String] -> IO ()
 add _args = undefined
