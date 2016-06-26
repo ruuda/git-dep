@@ -6,18 +6,10 @@
 
 module Command (add, graph, rebase, remove, status) where
 
-import           Control.Monad (forM_)
-import qualified Data.Text.IO as Text
-import           Git
-
-import RepositoryUtils (withCurrentRepository)
+import RepositoryUtils
 
 add :: [String] -> IO ()
-add _args = do
-  refs <- withCurrentRepository $ do
-    listReferences
-  forM_ refs Text.putStrLn
-  putStrLn "not implemented: add"
+add _args = undefined
 
 remove :: [String] -> IO ()
 remove _args = undefined
