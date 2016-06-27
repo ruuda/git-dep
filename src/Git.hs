@@ -8,20 +8,24 @@ module Git
 (
   getCurrentBranch,
   getDependencies,
+  getTransitiveDependencies,
   listBranches
 )
 where
 
-import Data.Char (isSpace)
-import Data.List (stripPrefix)
-import Data.Maybe (fromJust)
+import           Control.Monad (forM)
+import           Data.Char (isSpace)
+import           Data.List (stripPrefix)
+import           Data.Maybe (fromJust)
+import           Data.Set (Set)
+import qualified Data.Set as Set
 
 import GitPlumbing (GitOperation, runGitCommand, tryGitCommand)
 
 -- Some newtypes to make working with Git more type safe.
 
-newtype Sha    = Sha String
-newtype Branch = Branch String
+newtype Sha    = Sha String deriving (Eq, Ord)
+newtype Branch = Branch String deriving (Eq, Ord)
 
 -- At some point we need to communicate with the outside world and drop the
 -- wrapper types by using show.
@@ -54,3 +58,19 @@ getDependencies branch = do
   case deps of
     Just depsList -> return $ fmap Branch $ words depsList
     Nothing       -> return []
+
+-- Given a branch to start the search, returns a set of dependencies, where the
+-- first branch depends on the second one.
+getTransitiveDependencies :: Branch -> GitOperation (Set (Branch, Branch))
+getTransitiveDependencies rootBranch = aux (Set.singleton rootBranch) Set.empty Set.empty
+  where
+    makeEdge from to = (from, to)
+    makeEdges branch = fmap (Set.fromList . fmap (makeEdge branch)) $ getDependencies branch
+    aux new _   deps | Set.null new = return deps
+    aux new old deps | otherwise    = do
+      edgeSets <- forM (Set.toList new) makeEdges
+      let newBranches = Set.fromList $ fmap snd $ concatMap Set.toList edgeSets
+          deps'       = Set.unions (deps : edgeSets)
+          old'        = Set.union old new
+          new'        = Set.difference newBranches old'
+      aux new' old' deps'
