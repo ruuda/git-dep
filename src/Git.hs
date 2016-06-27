@@ -4,8 +4,15 @@
 -- it under the terms of the GNU General Public License version 3. See
 -- the licence file in the root of the repository.
 
-module Git (getDependencies, listBranches) where
+module Git
+(
+  getCurrentBranch,
+  getDependencies,
+  listBranches
+)
+where
 
+import Data.Char (isSpace)
 import Data.List (stripPrefix)
 import Data.Maybe (fromJust)
 
@@ -30,6 +37,13 @@ listBranches = do
   branches <- runGitCommand ["for-each-ref", "--format=%(refname)", "refs/heads"]
   return $ fmap parseBranch $ lines branches
     where parseBranch = Branch . fromJust . stripPrefix "refs/heads/"
+
+getCurrentBranch :: GitOperation Branch
+getCurrentBranch = do
+  ref <- runGitCommand ["symbolic-ref", "HEAD"]
+  -- TODO: Deal with the case where HEAD is not a branch.
+  -- TODO: Drop the newline at the end in a stricter way.
+  return $ Branch $ fromJust $ stripPrefix "refs/heads/" $ filter (not . isSpace) ref
 
 getDependencies :: Branch -> GitOperation [Branch]
 getDependencies branch = do
