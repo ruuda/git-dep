@@ -6,11 +6,12 @@
 
 module Command (add, graph, rebase, remove, status) where
 
-import Control.Monad (forM_)
+import           Control.Monad (forM_)
+import qualified Data.Set as Set
 
-import Git (getDependencies, listBranches)
+import Git (getCurrentBranch, getDependencies, getTransitiveDependencies, listBranches)
 import GitPlumbing (liftIO, runGit)
-import GraphTree (Graph, Tree)
+import GraphTree (buildForest, makeGraph, flatten)
 
 add :: [String] -> IO ()
 add _args = undefined
@@ -33,4 +34,12 @@ status _args = runGit $ do
       liftIO $ putStrLn $ (show branch) ++ " -> " ++ (show dep)
 
 graph :: [String] -> IO ()
-graph _args = undefined
+graph _args = runGit $ do
+  branch <- getCurrentBranch
+  deps   <- getTransitiveDependencies branch
+  -- TODO: Extract into pure function?
+  let depGraph = makeGraph (Set.singleton branch) deps
+      depTrees = buildForest depGraph
+      depList  = concatMap flatten depTrees
+  forM_ depList $ \ br -> do
+    liftIO $ putStrLn (show br)
