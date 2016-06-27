@@ -12,6 +12,7 @@ module GraphTree
   buildForest,
   edges,
   flatten,
+  makeGraph,
   vertices
 )
 where
@@ -26,6 +27,16 @@ data Ord v => Graph v
   = Graph { vertices :: Set v
           , edges    :: Set (v, v) -- Edges are of the form fst -> snd,
           } deriving (Show)        -- meaning that fst depends on snd.
+
+-- Given a set of vertices and a set of edges, constructs a valid graph. This
+-- ensures that all vertices which are edge endpoints are also present in the
+-- vertex collection.
+makeGraph :: Ord v => Set v -> Set (v, v) -> Graph v
+makeGraph vertices edges =
+  let outgoing    = Set.map fst edges
+      incoming    = Set.map snd edges
+      allVertices = Set.unions [vertices, outgoing, incoming]
+  in  Graph { vertices = allVertices, edges = edges }
 
 -- Returns all vertices in the graph which have an outgoing edge.
 nonRoots :: Ord v => Graph v -> Set v
