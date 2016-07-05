@@ -9,7 +9,7 @@ module Command (add, graph, rebase, remove, status) where
 import           Control.Monad (forM_)
 import qualified Data.Set as Set
 
-import Git (Branch (..), addDependency, getCurrentBranch, getDependencies, getTransitiveDependencies, listBranches)
+import Git
 import GitPlumbing (liftIO, runGit)
 import GraphTree (buildForest, indent, makeGraph, flatten)
 
@@ -23,7 +23,12 @@ add args = case args of
     putStrLn "  usage: git dep add <dependency> [<branch>]"
 
 remove :: [String] -> IO ()
-remove _args = undefined
+remove args = case args of
+  (dep : branch : []) -> runGit $ removeDependency (Branch dep) (Branch branch)
+  (dep : [])          -> runGit $ getCurrentBranch >>= removeDependency (Branch dep)
+  _                   -> do
+    putStrLn "git dep: wrong number of arguments for remove"
+    putStrLn "  usage: git dep remove <dependency> [<branch>]"
 
 rebase :: [String] -> IO ()
 rebase _args = undefined

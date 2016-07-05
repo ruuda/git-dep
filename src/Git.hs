@@ -12,12 +12,13 @@ module Git
   getDependencies,
   getTransitiveDependencies,
   listBranches,
+  removeDependency
 )
 where
 
 import           Control.Monad (forM)
 import           Data.Char (isSpace)
-import           Data.List (intersperse, stripPrefix)
+import           Data.List (delete, intersperse, stripPrefix)
 import           Data.Maybe (fromJust)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -83,6 +84,12 @@ getTransitiveDependencies rootBranch = aux (Set.singleton rootBranch) Set.empty 
           old'        = Set.union old new
           new'        = Set.difference newBranches old'
       aux new' old' deps'
+
+-- Removes the dependency form the dependencies of the given branch.
+removeDependency :: Branch -> Branch -> GitOperation ()
+removeDependency dependency branch = do
+  deps <- getDependencies branch
+  setDependencies branch $ delete dependency deps
 
 -- Sets the dependencies of the given branch.
 setDependencies :: Branch -> [Branch] -> GitOperation ()
