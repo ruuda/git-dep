@@ -6,16 +6,18 @@
 
 module Git
 (
+  Branch (..),
+  addDependency,
   getCurrentBranch,
   getDependencies,
   getTransitiveDependencies,
-  listBranches
+  listBranches,
 )
 where
 
 import           Control.Monad (forM)
 import           Data.Char (isSpace)
-import           Data.List (stripPrefix)
+import           Data.List (intersperse, stripPrefix)
 import           Data.Maybe (fromJust)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -35,6 +37,13 @@ instance Show Sha where
 
 instance Show Branch where
   show (Branch branch) = branch
+
+-- Adds the dependency to the dependencies of the given branch.
+addDependency :: Branch -> Branch -> GitOperation ()
+addDependency dependency branch = do
+  deps <- getDependencies branch
+  -- TODO: Sort and make unique?
+  setDependencies branch $ deps ++ [dependency]
 
 listBranches :: GitOperation [Branch]
 listBranches = do
@@ -74,3 +83,11 @@ getTransitiveDependencies rootBranch = aux (Set.singleton rootBranch) Set.empty 
           old'        = Set.union old new
           new'        = Set.difference newBranches old'
       aux new' old' deps'
+
+-- Sets the dependencies of the given branch.
+setDependencies :: Branch -> [Branch] -> GitOperation ()
+setDependencies branch deps = do
+  -- TODO: Unset key if the list is empty?
+  let depsList = concat $ intersperse " " $ fmap show deps
+  _ <- runGitCommand ["config", "branch." ++ (show branch) ++ ".deps", depsList]
+  return ()

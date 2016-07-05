@@ -9,12 +9,18 @@ module Command (add, graph, rebase, remove, status) where
 import           Control.Monad (forM_)
 import qualified Data.Set as Set
 
-import Git (getCurrentBranch, getDependencies, getTransitiveDependencies, listBranches)
+import Git (Branch (..), addDependency, getCurrentBranch, getDependencies, getTransitiveDependencies, listBranches)
 import GitPlumbing (liftIO, runGit)
 import GraphTree (buildForest, indent, makeGraph, flatten)
 
 add :: [String] -> IO ()
-add _args = undefined
+add args = case args of
+  -- TODO: Prevent circular dependencies.
+  (dep : branch : []) -> runGit $ addDependency (Branch dep) (Branch branch)
+  (dep : [])          -> runGit $ getCurrentBranch >>= addDependency (Branch dep)
+  _                   -> do
+    putStrLn "git dep: wrong number of arguments for add"
+    putStrLn "  usage: git dep add <dependency> [<branch>]"
 
 remove :: [String] -> IO ()
 remove _args = undefined
