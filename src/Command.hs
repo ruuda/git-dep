@@ -11,7 +11,7 @@ import qualified Data.Set as Set
 
 import Git (getCurrentBranch, getDependencies, getTransitiveDependencies, listBranches)
 import GitPlumbing (liftIO, runGit)
-import GraphTree (buildForest, makeGraph, flatten)
+import GraphTree (buildForest, indent, makeGraph, flatten)
 
 add :: [String] -> IO ()
 add _args = undefined
@@ -40,6 +40,6 @@ graph _args = runGit $ do
   -- TODO: Extract into pure function?
   let depGraph = makeGraph (Set.singleton branch) deps
       depTrees = buildForest depGraph
-      depList  = concatMap flatten depTrees
+      depList  = concatMap (flatten . indent) depTrees
   forM_ depList $ \ br -> do
-    liftIO $ putStrLn (show br)
+    liftIO $ putStrLn br

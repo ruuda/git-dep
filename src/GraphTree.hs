@@ -4,6 +4,8 @@
 -- it under the terms of the GNU General Public License version 3. See
 -- the licence file in the root of the repository.
 
+{-# LANGUAGE DeriveFunctor #-}
+
 module GraphTree
 (
   Graph,
@@ -12,6 +14,7 @@ module GraphTree
   buildForest,
   edges,
   flatten,
+  indent,
   makeGraph,
   vertices
 )
@@ -86,7 +89,7 @@ layers graph = reverse $ aux [] graph
         aux current gr | otherwise           = aux (roots gr : current) (removeRoots gr)
 
 -- A generic tree data structure.
-data Tree a = Node a [Tree a] deriving (Show)
+data Tree a = Node a [Tree a] deriving (Functor, Show)
 
 treeRoot :: Tree a -> a
 treeRoot (Node root _) = root
@@ -112,6 +115,12 @@ buildForest graph =
 annotateDepth :: Tree v -> Tree (Int, v)
 annotateDepth = aux 0
   where aux depth (Node v children) = Node (depth, v) $ fmap (aux (depth + 1)) children
+
+-- Convert a tree into a tree of strings with two spaces indentation per level.
+indent :: Show v => Tree v -> Tree String
+indent = fmap print . annotateDepth
+  where print (depth, value) = (spaces depth) ++ (show value)
+        spaces n             = take (n * 2) $ repeat ' '
 
 -- Converts the tree into a list by traversing it in pre-order.
 flatten :: Tree v -> [v]
